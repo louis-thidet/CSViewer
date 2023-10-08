@@ -99,7 +99,8 @@ def display_table():
 
 def show_total_rows():
     file_path = file_path_entry
-    if file_path != "" :
+    rows_label = total_rows_label.cget("text")
+    if file_path != "" and rows_label == "Total Rows Available: ???? rows":
         total_rows = sum(1 for _ in read_file(file_path))
         total_rows -= 1
         total_rows_label.config(text=f"Total Rows Available: {total_rows} rows")
