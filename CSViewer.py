@@ -14,8 +14,8 @@ file_path_entry = ""
 ########################################
 ##### TO KNOW THE FILE'S SEPARATOR #####
 ########################################
-def detect_separator(file_path):
-    with open(file_path, 'r', newline='', encoding='utf-8') as file:
+def detect_separator():
+    with open(file_path_entry, 'r', newline='', encoding='utf-8') as file:
         sample_line = next(file)
         if ',' in sample_line:
             return ','
@@ -27,11 +27,11 @@ def detect_separator(file_path):
 ########################################
 ###### TO READ THE FILE REQUESTED ######
 ########################################
-def read_file(file_path):
+def read_file():
     global file_path_entry
     
-    if file_path.endswith('.csv'):
-        with open(file_path, 'r', newline='', encoding='utf-8') as file:
+    if file_path_entry.endswith('.csv'):
+        with open(file_path_entry, 'r', newline='', encoding='utf-8') as file:
             try:
                 # Determine the delimiter based on the file content
                 sample_line = next(file)
@@ -56,9 +56,9 @@ def read_file(file_path):
                 # Handle the error further if needed
                 # You can choose to return or exit the program here
 
-    elif file_path.endswith('.xlsx'):
+    elif file_path_entry.endswith('.xlsx'):
         try:
-            workbook = openpyxl.load_workbook(file_path)
+            workbook = openpyxl.load_workbook(file_path_entry)
             sheet = workbook.active
             for row in sheet.iter_rows(values_only=True):
                 yield list(row)
@@ -67,8 +67,6 @@ def read_file(file_path):
     else:
         file_path_entry = ""
         messagebox.showinfo("Error", "Unsupported file format.")
-
-
 
 ########################################
 ### TO DISPLAY THE TABLE ON THE GUI ####
@@ -81,10 +79,9 @@ def display_table():
         num_lines = 11  # Display the first 10 lines by default
 
     table_data = []
-    file_path = file_path_entry
 
-    if file_path != "" :
-        for i, row in enumerate(read_file(file_path)):
+    if file_path_entry != "" :
+        for i, row in enumerate(read_file()):
             if i >= num_lines:
                 break
             # Add an additional column with the column number to each row
@@ -96,12 +93,14 @@ def display_table():
         output_text.delete(1.0, "end")
         output_text.insert("insert", table_str)
         output_text.config(state="disabled")
+        input_extension = os.path.splitext(file_path_entry)[-1]
+        input_filename, _ = os.path.splitext(os.path.basename(file_path_entry))
+        app.title(input_filename + input_extension)
 
 def show_total_rows():
-    file_path = file_path_entry
     rows_label = total_rows_label.cget("text")
-    if file_path != "" and rows_label == "Total Rows Available: ???? rows":
-        total_rows = sum(1 for _ in read_file(file_path))
+    if file_path_entry != "" and rows_label == "Total Rows Available: ???? rows":
+        total_rows = sum(1 for _ in read_file())
         total_rows -= 1
         total_rows_label.config(text=f"Total Rows Available: {total_rows} rows")
 
@@ -109,8 +108,7 @@ def show_total_rows():
 #########################################################
 ### TO SAVE THE TABLE WITH THE NUMBER OF LINES CHOSEN ###
 #########################################################
-def writeOutput():
-    file_path = file_path_entry
+def write_output():
     num_lines_str = num_lines_entry.get()
 
     if num_lines_str:
@@ -118,16 +116,16 @@ def writeOutput():
     else:
         num_lines = None  # None means save all lines
 
-    input_extension = os.path.splitext(file_path)[-1]
-    input_filename, _ = os.path.splitext(os.path.basename(file_path))
+    input_extension = os.path.splitext(file_path_entry)[-1]
+    input_filename, _ = os.path.splitext(os.path.basename(file_path_entry))
     output_filename = f"{input_filename}_output{input_extension}"
     
     # Extract the directory path from the loaded file's path
-    output_directory = os.path.dirname(file_path)
+    output_directory = os.path.dirname(file_path_entry)
     output_path = os.path.join(output_directory, output_filename)
 
-    if file_path.endswith('.csv'):
-        delimiter = detect_separator(file_path)
+    if file_path_entry.endswith('.csv'):
+        delimiter = detect_separator()
         if delimiter is None:
             print("Unsupported delimiter in the file. Only CSV files with ',' or ';' delimiters are supported.")
             return
@@ -142,14 +140,14 @@ def writeOutput():
         with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
             writer = csv.writer(output_file, delimiter=delimiter)
 
-            for i, row in enumerate(read_file(file_path)):
+            for i, row in enumerate(read_file()):
                 if num_lines is not None and i >= num_lines:
                     break
                 writer.writerow(row)
         print(f"Table saved to {output_path}")
         messagebox.showinfo("Save Complete", f"Table saved to {output_path}")
 
-    elif file_path.endswith('.xlsx'):
+    elif file_path_entry.endswith('.xlsx'):
         # Check if the output file already exists
         counter = 0
         while os.path.exists(output_path):
@@ -160,7 +158,7 @@ def writeOutput():
         output_workbook = openpyxl.Workbook()
         output_sheet = output_workbook.active
 
-        for i, row in enumerate(read_file(file_path)):
+        for i, row in enumerate(read_file()):
             if num_lines is not None and i >= num_lines:
                 break
             output_sheet.append(row)
@@ -225,7 +223,7 @@ display_button = ttk.Button(frame, text="Display Table", command=display_table)
 display_button.grid(row=1, column=2, padx=5, pady=5)
 
 # Button to save an output of the table, with the number of lines chosen (everything if num_lines_entry is empty)
-save_output = ttk.Button(frame, text="Save Table", command=writeOutput)
+save_output = ttk.Button(frame, text="Save Table", command=write_output)
 save_output.grid(row=1, column=3, padx=5, pady=5)
 
 # Output to show the table's data
@@ -258,10 +256,9 @@ total_rows_label.grid(row=4, column=0, columnspan=4, padx=5, pady=5)
 frame.grid_rowconfigure(2, weight=1)
 frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
 
-# Check if the program has been executed from a file; if there is at least one command-line argument
+# Check if the program has been executed from a file
 if len(sys.argv) > 1:
-    file_path = sys.argv[1]
-    file_path_entry = file_path
+    file_path_entry = sys.argv[1]
     print(file_path_entry)
     display_table()
 
